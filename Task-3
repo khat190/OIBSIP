@@ -1,0 +1,97 @@
+import speech_recognition as sr  # Listens to voice
+import pyttsx3                   # Speaks 
+import pywhatkit                 # Searches web/plays YouTube
+import datetime                  # Gets time/date
+import time                      # For delays between commands
+import sys                       # For clean exit
+
+class VoiceAssistant:
+    def __init__(self):
+        # Initialize the assistant's components
+        self.listener = sr.Recognizer() #creates ears to recognize whats being said
+        self.engine = pyttsx3.init()    #creates a text to speech engine basically the assisstant's mouth so "init" here starts the engine
+        
+        # Configure the speech engine
+        self.engine.setProperty('rate', 150)  #  Changes speaking speed
+        self.engine.getProperty('voices')   #  Gets available voices
+    
+    def talk(self, text):
+        print(f"Assistant: {text}")
+        self.engine.say(text) # makes engine prepare speech
+        self.engine.runAndWait() # makes engine actually speak
+    
+    def greet(self):
+        # Get the current time to determine greeting
+        hour = datetime.datetime.now().hour
+        
+        if hour < 12:
+            greeting = "Good morning!"
+        elif hour < 18:
+            greeting = "Good afternoon!"
+        else:
+            greeting = "Good evening!"
+        
+        message = f"{greeting} I am your voice assistant. How can I help you today?"
+        self.talk(message)
+    
+    def listen(self):
+        try:
+            with sr.Microphone() as source:
+                print("You can start speaking")
+                self.listener.adjust_for_ambient_noise(source) # removes background noise
+                
+                voice = self.listener.listen(source, timeout=8) # timeout if it does'nt hear anything till 8 secs
+                command = self.listener.recognize_google(voice)
+                print(f"You said: {command}")
+                return command.lower()
+                
+        except sr.WaitTimeoutError:
+            print("⏰ Timeout! I didn't hear anything.") #No longer stops program - just continues
+            return ""
+        except sr.UnknownValueError:
+            print("❌ Couldn't understand.") #No longer stops program - just continues
+            return ""
+        except Exception as e: # The base class for all Python errors
+            print(f"❌ Error: {e}.") # here "e" specifies the type of error - but no longer stops program
+            return ""
+    
+    def process_command(self, command):
+        """Process commands and speak responses"""
+        if not command:
+            return False
+        
+        if "hello" in command:
+            self.talk("Hello there! How can I help you?")
+        elif "time" in command:
+            time = datetime.datetime.now().strftime("%I:%M %p")
+            self.talk(f"The current time is {time}")
+        elif "date" in command:
+            date = datetime.date.today()
+            self.talk(f"Today's date is {date}")
+        elif "search" in command:
+            topic = command.replace("search", "")
+            self.talk(f"Searching for {topic}")
+            pywhatkit.search(topic)
+        elif "stop" in command or "exit" in command or "quit" in command:
+            self.talk("Goodbye! Have a great day!")
+            return True  # Signal to stop the program
+        else:
+            self.talk("Sorry, I didn't get that. Please say again.")
+        
+        return False  # Continue running
+    
+    def run(self):
+        """Main method to run the voice assistant"""
+        self.greet()  # Start with greeting
+        
+        while True:
+            command = self.listen()
+            should_exit = self.process_command(command)
+            
+            if should_exit:
+                break  # Exit the loop
+
+# Create and run the assistant
+if __name__ == "__main__":
+    assistant = VoiceAssistant()  # Create a voice assistant object
+    assistant.run()  # Start the assistant
